@@ -19,14 +19,28 @@ loop do
     if streak_timestamp == 0
       streak_timestamp = timestamp
     else
+      p [streak, offset, lines.to_a[streak], offset * lines.to_a[streak][0]]
       offset = timestamp - streak_timestamp
-      p [streak, offset]
       streak_timestamp = 0
       streak += 1
     end
   end
 
   timestamp += offset
+end
+
+p timestamp
+
+
+# solution from reddit
+# basically my loop sucks because I could have calculated the interval increment earlier
+timestamp = 0
+interval = 1
+
+lines.each do |line, offset|
+  timestamp += interval until (timestamp + offset) % line == 0
+  p interval
+  interval *= line
 end
 
 p timestamp
