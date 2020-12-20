@@ -25,8 +25,8 @@ def visible_place_states(places, row_index, column_index)
   end
 end
 
-def next_places(places)
-  next_places = places.each_with_index.map do |row, row_index|
+def evolve(places)
+  new_places = places.each_with_index.map do |row, row_index|
     row.each_with_index.map do |place, column_index|
       if place == "L"
         next "#" if visible_place_states(places, row_index, column_index).count { |i| i == "#" } == 0
@@ -38,9 +38,9 @@ def next_places(places)
     end
   end
 
-  return next_places(next_places) if next_places != places
+  return evolve(new_places) if new_places != places
 
-  next_places
+  new_places
 end
 
 require 'benchmark'
@@ -54,7 +54,7 @@ time = Benchmark.measure {
     end
   end
 
-  places = next_places(places)
+  places = evolve(places)
 
   sum = places.reduce(0) do |sum,row|
     sum += row.count { |e| e == "#" }
