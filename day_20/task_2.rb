@@ -1,6 +1,5 @@
 require 'pry'
 
-SEA_MONSTER_HASH_COUNT = 15
 SEA_MONSTER = {
   /(?=(..................(#|0).))/ => [18],
   /(?=((#|0)....(#|0)(#|0)....(#|0)(#|0)....(#|0)(#|0)(#|0)))/ => [0, 5, 6, 11, 12, 17, 18, 19],
@@ -8,35 +7,46 @@ SEA_MONSTER = {
 }.freeze
 
 class Tile
-  attr_reader :unmatched_borders, :id, :matrix
+  attr_reader :id, :matrix
 
   def initialize(id, matrix)
     @id = id
     @matrix = matrix
   end
 
-  def match_neighbors!(tiles)
+  def self.tiles
+    @tiles ||= []
+  end
+
+  def find_by_border(border)
+    tiles.find do |tile|
+      next if tile == self
+
+      tile.border?(border) || tile.border?(border.reverse)
+    end
+  end
+
+  def tiles
+    self.class.tiles
+  end
+
+  def match_neighbors!
     return if @matched
 
     @matched = true
-    new_neighbors = []
 
     borders.each do |border, neighbor|
       next if neighbor
-
-      new_neighbor = tiles.find do |tile|
-        next if tile == self
-
-        tile.find_border(border)
-      end
-
-      next unless new_neighbor
+      next unless (new_neighbor = find_by_border(border))
 
       fit_neighbor!(new_neighbor, border)
-      new_neighbors << new_neighbor
-    end
 
-    new_neighbors.each { |neighbor| neighbor.match_neighbors!(tiles) }
+      new_neighbor.match_neighbors!
+    end
+  end
+
+  def border?(border)
+    borders.key?(border)
   end
 
   def properly_positioned?(tiles)
@@ -45,7 +55,7 @@ class Tile
 
       neighbor = tiles.find { |n| n.id == id }
 
-      next :reversed unless neighbor.borders.key?(border)
+      next :reversed unless neighbor.border?(border)
       next :malpositioned unless border_position(border) == opposite(neighbor.border_position(border))
 
       true
@@ -54,24 +64,15 @@ class Tile
 
   def fit_neighbor!(other, border)
     borders[border] = other.id
-    other.borders.key?(border) ? other.borders[border] = id : other.borders[border.reverse] = id
-    other.fit_border!(border, opposite(border_position(border)))
+    other.border?(border) ? other.borders[border] = id : other.borders[border.reverse] = id
+    other.match_border!(border, opposite(border_position(border)))
 
     other
   end
 
-  def match_border!(border)
-    return if borders.key?(border)
-
-    if borders.keys[0].reverse == border || borders.keys[2].reverse == border
-      flip_horizontally!
-    else
-      flip_vertically!
-    end
-  end
-
-  def fit_border!(border, side)
-    match_border!(border)
+  # could be done nicer and more optimally
+  def match_border!(border, side)
+    expose_border!(border)
 
     return if side == border_position(border)
 
@@ -83,7 +84,17 @@ class Tile
       rotate_right!
     end
 
-    match_border!(border)
+    expose_border!(border)
+  end
+
+  def expose_border!(border)
+    return if border?(border)
+
+    if borders.keys[0].reverse == border || borders.keys[2].reverse == border
+      flip_horizontally!
+    else
+      flip_vertically!
+    end
   end
 
   def flip_vertically!
@@ -178,12 +189,6 @@ class Tile
     end
   end
 
-  def find_border(border)
-    borders.find do |k, v|
-      v.nil? && (k == border || k == border.reverse)
-    end
-  end
-
   def borders
     @borders ||= {
       @matrix.first => nil,
@@ -193,15 +198,11 @@ class Tile
     }
   end
 
-  def rows
-    @matrix.map { |e| e.join("") }
-  end
-
   def merged
-    @matrix.map { |e| e.join("") }.join("\n")
+    @matrix.map { |e| e.join('') }.join("\n")
   end
 
-  def neighbors(tiles)
+  def neighbors
     borders.values.map { |id| tiles.find { |t| t.id == id } }
   end
 
@@ -212,7 +213,7 @@ class Tile
     result[y] ||= []
     result[y][x] = id
 
-    neighbors(tiles).each_with_index do |tile, index|
+    neighbors.each_with_index do |tile, index|
       next unless tile
 
       n_x = x + [0, 1, 0, -1][index]
@@ -255,11 +256,15 @@ class Tile
       offsets = offsets0 & offsets1 & offsets2
 
       offsets.each do |offset|
-        draw_monster_line!(0, offset, matrix[index + 0])
-        draw_monster_line!(1, offset, matrix[index + 1])
-        draw_monster_line!(2, offset, matrix[index + 2])
+        draw_monster!(index, offset)
       end
     end
+  end
+
+  def draw_monster!(index, offset)
+    draw_monster_line!(0, offset, matrix[index + 0])
+    draw_monster_line!(1, offset, matrix[index + 1])
+    draw_monster_line!(2, offset, matrix[index + 2])
   end
 
   def draw_monster_line!(line, offset_start, row)
@@ -271,12 +276,14 @@ end
 
 tiles = File.read('input.txt').split("\n\n").map do |line|
   rows = line.split("\n")
-  id = rows.shift.split(" ")[1].to_i
+  id = rows.shift.split(' ')[1].to_i
 
-  Tile.new(id, rows.map(&:chars))
+  tile = Tile.new(id, rows.map(&:chars))
+  Tile.tiles << tile
+  tile
 end
 
-tiles.first.match_neighbors!(tiles)
+tiles.first.match_neighbors!
 top_left = tiles.find { |t| t.borders.values[0].nil? && t.borders.values[3].nil? }
 
 big_tile = Tile.new(-1, top_left.to_id_array(tiles, 0, 0).flat_map do |row|
@@ -292,22 +299,8 @@ big_tile = Tile.new(-1, top_left.to_id_array(tiles, 0, 0).flat_map do |row|
   matrix
 end)
 
-# pictures = []
-# 4.times { pictures << big_tile.rows; big_tile.rotate_left! }
-
-# big_tile.flip_vertically!
-# 4.times { pictures << big_tile.rows; big_tile.rotate_left! }
-
-# big_tile.flip_horizontally!
-# 4.times { pictures << big_tile.rows; big_tile.rotate_left! }
-
-# big_tile.flip_vertically!
-# 4.times { pictures << big_tile.rows; big_tile.rotate_left! }
-
 big_tile.rotate_left!
-big_tile.flip_vertically!
 print big_tile.draw_all_monsters!
 print "\n"
 
 p big_tile.merged.count("#") # 2146
-
