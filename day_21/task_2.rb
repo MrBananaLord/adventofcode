@@ -11,11 +11,7 @@ foods = File.read('input.txt').split("\n").each_with_index.map do |line, index|
   food_allergens = food_allergens.split(', ')
 
   food_allergens.each do |allergen|
-    if allergens.key?(allergen)
-      allergens[allergen] = allergens[allergen] & food_ingredients
-    else
-      allergens[allergen] = food_ingredients
-    end
+    allergens[allergen] = allergens.key?(allergen) ? (allergens[allergen] & food_ingredients) : food_ingredients
   end
 
   {
