@@ -2,14 +2,14 @@ require 'pry'
 
 PICK_UP_SIZE = 3
 
-cups = [3, 8, 9, 1, 2, 5, 4, 6, 7] + (10..50).to_a
+cups = [3, 8, 9, 1, 2, 5, 4, 6, 7] # + (10..50).to_a
 # cups = [1, 9, 8, 7, 5, 3, 4, 6, 2] + (10..1_000_000).to_a
 
 current_cup_index = 0
 cups_count = cups.length
 max_candidates = cups.max(4)
 
-10_000_000.times do |x|
+10.times do |x|
   # p x if (x % 100 == 0)
   # print("round #{x + 1}\ncurrent = (#{cups[current_cup_index]})\ncups = #{cups}\n")
 
@@ -39,4 +39,4 @@ end
 
 # binding.pry;
 index = cups.index(1)
-# p (cups[index..-1] + cups[0..index-1])[1..-1].join('')
+p (cups[index..-1] + cups[0..index-1])[1..-1].join('')
