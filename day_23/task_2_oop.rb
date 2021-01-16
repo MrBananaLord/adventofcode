@@ -2,11 +2,10 @@ require 'pry'
 
 PICK_UP_SIZE = 3
 ROUNDS = 10_000_000
-
 DEBUG = false
 
 CUPS = [3, 8, 9, 1, 2, 5, 4, 6, 7] + (10..1_000_000).to_a
-CUPS = [1, 9, 8, 7, 5, 3, 4, 6, 2] + (10..1_000_000).to_a
+# CUPS = [1, 9, 8, 7, 5, 3, 4, 6, 2] + (10..1_000_000).to_a
 
 class Cup
   attr_reader :value
@@ -37,14 +36,13 @@ class Cup
   end
 
   def pick_up!
-    result = [next_cup, next_cup.next_cup, next_cup.next_cup.next_cup]
-    self.next_cup = next_cup.next_cup.next_cup.next_cup
+    cup3 = next_cup.next_cup.next_cup
+    result = [next_cup, next_cup.next_cup, cup3].map(&:value)
+    self.next_cup = cup3.next_cup
     result
   end
 
-  def destination_cup(pick_up)
-    pick_up_values = pick_up.map(&:value)
-
+  def destination_cup(pick_up_values)
     destination_cup_value = (@destination_candidate_values - pick_up_values).first
 
     if destination_cup_value.zero?
@@ -54,9 +52,9 @@ class Cup
     end
   end
 
-  def insert!(pick_up)
-    pick_up.last.next_cup = next_cup
-    self.next_cup = pick_up.first
+  def insert!(pick_up_values)
+    find(pick_up_values.last).next_cup = next_cup
+    self.next_cup = find(pick_up_values.first)
   end
 
   def current?
@@ -120,7 +118,7 @@ ROUNDS.times do |x|
   print("-- move #{x + 1} --\ncups: #{current_cup.pretty_cups(x % Cup.all.count)}\n") if DEBUG
 
   pick_up = current_cup.pick_up!
-  print("pick up: #{pick_up.map(&:value)}\n") if DEBUG
+  print("pick up: #{pick_up}\n") if DEBUG
 
   destination_cup = current_cup.destination_cup(pick_up)
   print("destination: #{destination_cup.value}\n") if DEBUG
