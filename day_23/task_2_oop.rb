@@ -1,15 +1,16 @@
 require 'pry'
 
 PICK_UP_SIZE = 3
-ROUNDS = 10_000_000
-DEBUG = false
+ROUNDS = 10#_000_000
+DEBUG = true
 
-CUPS = [3, 8, 9, 1, 2, 5, 4, 6, 7] + (10..1_000_000).to_a
+CUPS = [3, 8, 9, 1, 2, 5, 4, 6, 7] #+ (10..1_000_000).to_a
 # CUPS = [1, 9, 8, 7, 5, 3, 4, 6, 2] + (10..1_000_000).to_a
 
 class Cup
   attr_reader :value
-  attr_accessor :next_cup, :current
+  attr_writer :next_cup
+  attr_accessor :current
 
   def initialize(value)
     @value = value
@@ -35,10 +36,17 @@ class Cup
     self.class.all[value]
   end
 
+  def next_cup(offset = 1)
+    if offset == 1
+      @next_cup
+    else
+      @next_cup.next_cup(offset - 1)
+    end
+  end
+
   def pick_up!
-    cup3 = next_cup.next_cup.next_cup
-    result = [next_cup, next_cup.next_cup, cup3].map(&:value)
-    self.next_cup = cup3.next_cup
+    result = [next_cup, next_cup(2), next_cup(3)].map(&:value)
+    self.next_cup = next_cup(4)
     result
   end
 
@@ -130,4 +138,4 @@ ROUNDS.times do |x|
 end
 
 print("-- final --\ncups: #{current_cup.pretty_cups(ROUNDS % Cup.all.count)}\n") if DEBUG
-print(Cup.all[1].next_cup.value * Cup.all[1].next_cup.next_cup.value)
+print(Cup.all[1].next_cup.value * Cup.all[1].next_cup(2).value)
